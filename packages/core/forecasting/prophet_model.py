@@ -1,5 +1,5 @@
 import pandas as pd
-from prophet import Prophet
+from neuralprophet import NeuralProphet as Prophet
 
 def forecast_prophet(sales_df: pd.DataFrame, horizon=14):
     """

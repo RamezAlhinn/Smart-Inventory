@@ -1,7 +1,7 @@
 streamlit==1.49.1
 pandas==2.2.2
 numpy==1.26.4
-prophet==1.1.5
+neuralprophet==0.6.2
 altair==5.3.0
 pyarrow==15.0.2
 -e .
