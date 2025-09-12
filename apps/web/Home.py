@@ -58,21 +58,42 @@ if sales_file and stock_file:
         sigma = series.tail(28).std() if len(series) >= 2 else 0.0
 
         # Stock
-        on_hand_row = stock[(stock["sku"] == sku) & (stock["store_id"].isin([store] if store != "All" else stock["store_id"].unique()))]
+        on_hand_row = stock[
+            (stock["sku"] == sku) &
+            (stock["store_id"].isin([store] if store != "All" else stock["store_id"].unique()))
+        ]
         on_hand = int(on_hand_row["on_hand"].iloc[0]) if not on_hand_row.empty else 0
 
         # Reorder
         qty, rop, ss = suggest_order(d_daily, sigma, lead, on_hand, moq)
 
         # Product name/category if available
-        prod_name = products.loc[products["sku"] == sku, "name"].values[0] if products is not None and sku in products["sku"].values else sku
-        prod_cat = products.loc[products["sku"] == sku, "category"].values[0] if products is not None and sku in products["sku"].values else (sales_filtered[sales_filtered["sku"] == sku]["category"].iloc[0] if "category" in sales_filtered.columns else "")
+        prod_name = (
+            products.loc[products["sku"] == sku, "name"].values[0]
+            if products is not None and sku in products["sku"].values
+            else sku
+        )
+        prod_cat = (
+            products.loc[products["sku"] == sku, "category"].values[0]
+            if products is not None and sku in products["sku"].values
+            else (sales_filtered[sales_filtered["sku"] == sku]["category"].iloc[0]
+                  if "category" in sales_filtered.columns else "")
+        )
+        supplier = (
+            products.loc[products["sku"] == sku, "supplier"].values[0]
+            if products is not None and sku in products["sku"].values
+            else "Unknown"
+        )
+        unit_cost = (
+            float(products.loc[products["sku"] == sku, "unit_cost"].values[0])
+            if products is not None and sku in products["sku"].values
+            else 1.0
+        )
 
         # Expiry risk (simple placeholder logic: perishable categories flagged)
         expiry_flag = "⚠️ Expiry Risk" if prod_cat in ["Dairy", "Bakery", "Produce"] else "OK"
 
-        # Cost estimation (placeholder: assume unit cost = 1 JOD)
-        unit_cost = 1
+        # Cost estimation
         order_cost = qty * unit_cost
 
         # Status
@@ -92,9 +113,11 @@ if sales_file and stock_file:
             "Avg Daily Demand": round(d_daily, 0),
             "Reorder Point": round(rop, 0),
             "Suggested Order Qty": int(qty),
+            "Unit Cost (JOD)": unit_cost,
             "Order Cost (JOD)": round(order_cost, 2),
             "Expiry Risk": expiry_flag,
-            "Status": status
+            "Status": status,
+            "supplier": supplier
         })
 
     # --- Results table ---
@@ -113,12 +136,35 @@ if sales_file and stock_file:
         df_results["status_sort"] = df_results["Status"].map(status_order)
         df_results = df_results.sort_values(by="status_sort").drop(columns=["status_sort"])
 
+        # All products table
         st.subheader("📦 Suggested Orders for All Products")
         st.dataframe(df_results)
 
-        # Download button
+        # Download all products in one file
         st.download_button("⬇️ Download Full Purchase Order CSV",
                            df_results.to_csv(index=False),
                            "purchase_order.csv")
+
+        # --- Group by Supplier ---
+        if "supplier" in df_results.columns:
+            st.subheader("Purchase Orders by Supplier")
+
+            grouped = df_results.groupby("supplier")
+            for supplier, df_group in grouped:
+                with st.expander(f" {supplier} — {len(df_group)} products", expanded=False):
+                    st.dataframe(df_group[[
+                        "Product", "SKU", "Category", "Store",
+                        "On Hand", "Avg Daily Demand", "Reorder Point",
+                        "Suggested Order Qty", "Unit Cost (JOD)", "Order Cost (JOD)",
+                        "Expiry Risk", "Status"
+                    ]])
+
+                    # Download PO for each supplier
+                    st.download_button(
+                        f"⬇️ Download PO for {supplier}",
+                        df_group.to_csv(index=False),
+                        f"PO_{supplier.replace(' ', '_')}.csv"
+                    )
+
     else:
         st.info("No products found with current filters.")
