@@ -1,6 +1,8 @@
 import sys, os
-# Add project root (3 levels up from apps/web/) to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+# Go to project root (2 levels up from this file)
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 import streamlit as st
 import pandas as pd
 from packages.core.forecasting.baseline import to_daily, moving_avg_forecast
