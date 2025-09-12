@@ -2,9 +2,13 @@ import pandas as pd
 
 # Convert sales data into a daily time series (fills missing days with 0).
 def to_daily(series_df: pd.DataFrame) -> pd.Series:
-    s = (series_df
-         .rename(columns={"date":"date","qty_sold":"y"})
-         .set_index(pd.to_datetime(series_df["date"]))["y"]
+    # Ensure one row per date: group by date and sum
+    grouped = series_df.groupby("date")["qty_sold"].sum().reset_index()
+
+    # Rename and reindex to daily frequency
+    s = (grouped
+         .rename(columns={"date": "ds", "qty_sold": "y"})
+         .set_index(pd.to_datetime(grouped["date"]))["y"]
          .asfreq("D", fill_value=0))
     return s
 
