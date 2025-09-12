@@ -8,7 +8,7 @@ def forecast_prophet(sales_df: pd.DataFrame, horizon=14):
     """
     df = sales_df.rename(columns={"date": "ds", "qty_sold": "y"})
     model = Prophet(daily_seasonality=True, yearly_seasonality=True)
-    model.fit(df)
+    model.fit(df, freq="D")
 
     future = model.make_future_dataframe(periods=horizon)
     forecast = model.predict(future)
