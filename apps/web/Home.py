@@ -1,8 +1,9 @@
 import sys, os
-# Go to project root (2 levels up from this file)
+# Fix path so Streamlit Cloud can find packages/
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
+
 import streamlit as st
 import pandas as pd
 from packages.core.forecasting.baseline import to_daily, moving_avg_forecast
@@ -29,8 +30,19 @@ if sales_file and stock_file:
 
     store = st.selectbox("Select Store", ["All"] + available_stores)
     categories = st.multiselect("Select Categories", available_categories, default=available_categories)
-    model_choice = st.selectbox("Forecast Model", ["Moving Average", "Prophet"])
-    horizon = st.slider("Forecast Horizon (days)", 7, 30, 14)
+
+    # Forecast model choice
+    model_choice = st.selectbox(
+        "Forecast Model",
+        ["Moving Average (fast)", "Prophet (slower)"]
+    )
+
+    # Horizon slider (shorter for Prophet)
+    if model_choice == "Prophet (slower)":
+        horizon = st.slider("Forecast Horizon (days)", 7, 14, 7)
+    else:
+        horizon = st.slider("Forecast Horizon (days)", 7, 30, 14)
+
     lead = st.number_input("Lead Time (days)", 1, 30, 5)
     moq = st.number_input("Minimum Order Quantity", 1, 1000, 1)
 
@@ -51,10 +63,10 @@ if sales_file and stock_file:
         series = to_daily(s_df)
 
         # Forecast
-        if model_choice == "Moving Average":
+        if model_choice == "Moving Average (fast)":
             fcst = moving_avg_forecast(series, window=7, horizon=horizon)
-            d_daily = fcst["yhat"].mean()
-        else:
+            d_daily = max(fcst["yhat"].mean(), 0)
+        else:  # Prophet
             df = s_df.rename(columns={"date": "ds", "qty_sold": "y"})
             fcst = forecast_prophet(df, horizon=horizon)
             d_daily = fcst.tail(horizon)["yhat"].mean()
@@ -72,7 +84,7 @@ if sales_file and stock_file:
         # Reorder
         qty, rop, ss = suggest_order(d_daily, sigma, lead, on_hand, moq)
 
-        # Product name/category if available
+        # Product info (if provided)
         prod_name = (
             products.loc[products["sku"] == sku, "name"].values[0]
             if products is not None and sku in products["sku"].values
@@ -95,7 +107,7 @@ if sales_file and stock_file:
             else 1.0
         )
 
-        # Expiry risk (simple placeholder logic: perishable categories flagged)
+        # Expiry risk
         expiry_flag = "⚠️ Expiry Risk" if prod_cat in ["Dairy", "Bakery", "Produce"] else "OK"
 
         # Cost estimation
@@ -136,35 +148,32 @@ if sales_file and stock_file:
         col3.metric("⚠️ Warnings", (df_results["Status"] == "🟨 Warning").sum())
         col4.metric("💰 Total Order Cost", f"{df_results['Order Cost (JOD)'].sum()} JOD")
 
-        # Sort table: Critical first, then Warning, then Safe
+        # Sort table: Critical > Warning > Safe
         status_order = {"🟥 Critical": 0, "🟨 Warning": 1, "🟩 Safe": 2}
         df_results["status_sort"] = df_results["Status"].map(status_order)
         df_results = df_results.sort_values(by="status_sort").drop(columns=["status_sort"])
 
-        # All products table
+        # Show results
         st.subheader("📦 Suggested Orders for All Products")
         st.dataframe(df_results)
 
-        # Download all products in one file
+        # Download all products
         st.download_button("⬇️ Download Full Purchase Order CSV",
                            df_results.to_csv(index=False),
                            "purchase_order.csv")
 
-        # --- Group by Supplier ---
+        # Group by Supplier (with expanders)
         if "supplier" in df_results.columns:
-            st.subheader("Purchase Orders by Supplier")
-
+            st.subheader("📑 Purchase Orders by Supplier")
             grouped = df_results.groupby("supplier")
             for supplier, df_group in grouped:
-                with st.expander(f" {supplier} — {len(df_group)} products", expanded=False):
+                with st.expander(f"🏢 {supplier} — {len(df_group)} products", expanded=False):
                     st.dataframe(df_group[[
                         "Product", "SKU", "Category", "Store",
                         "On Hand", "Avg Daily Demand", "Reorder Point",
                         "Suggested Order Qty", "Unit Cost (JOD)", "Order Cost (JOD)",
                         "Expiry Risk", "Status"
                     ]])
-
-                    # Download PO for each supplier
                     st.download_button(
                         f"⬇️ Download PO for {supplier}",
                         df_group.to_csv(index=False),
