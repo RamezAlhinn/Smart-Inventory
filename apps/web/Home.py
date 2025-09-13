@@ -53,7 +53,7 @@ if sales_file and stock_file:
     if categories:
         sales_filtered = sales_filtered[sales_filtered["category"].isin(categories)]
 
-    # --- Process each SKU ---
+    # --- Process each SKU --
     results = []
     for sku in sales_filtered["sku"].unique():
         s_df = sales_filtered[sales_filtered["sku"] == sku][["date", "qty_sold"]]
