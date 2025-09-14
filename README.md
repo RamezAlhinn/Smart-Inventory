@@ -41,12 +41,9 @@ flowchart TD
     E --> F[Purchase Order CSV Export]
 
 
----
-
-### 📐 Sequence Diagram  
+--- 
 
 ```markdown
-## 📐 Sequence Diagram  
 
 ```mermaid
 sequenceDiagram
