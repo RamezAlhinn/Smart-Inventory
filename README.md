@@ -40,9 +40,6 @@ flowchart TD
     D --> E[Streamlit Dashboard]
     E --> F[Purchase Order CSV Export]
 
----
-
-## 📐 Sequence Diagram  
 
 ```mermaid
 sequenceDiagram
