@@ -41,12 +41,20 @@ flowchart TD
     E --> F[Purchase Order CSV Export]
 
 
+---
+
+### 📐 Sequence Diagram  
+
+```markdown
+## 📐 Sequence Diagram  
+
+```mermaid
 sequenceDiagram
-    participant User as Manager
-    participant UI as Streamlit Dashboard
-    participant Engine as Inventory Engine
-    participant Forecast as Forecasting Model
-    participant Output as Purchase Order CSV
+    participant User
+    participant UI as Dashboard
+    participant Engine as InventoryEngine
+    participant Forecast as ForecastModel
+    participant Output as PurchaseOrderCSV
 
     User->>UI: Upload sales.csv, stock.csv, products.csv
     UI->>Forecast: Send sales data for demand forecasting
