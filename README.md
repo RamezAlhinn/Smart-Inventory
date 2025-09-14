@@ -41,9 +41,8 @@ flowchart TD
     E --> F[Purchase Order CSV Export]
 
 
-```mermaid
 sequenceDiagram
-    participant User as User (Manager)
+    participant User as Manager
     participant UI as Streamlit Dashboard
     participant Engine as Inventory Engine
     participant Forecast as Forecasting Model
