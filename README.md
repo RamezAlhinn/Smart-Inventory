@@ -32,8 +32,6 @@ The architecture is **modular** and can be extended to other verticals (e.g., ph
 
 ## 🏗 Architecture  
 
-```markdown
-
 ```mermaid
 sequenceDiagram
     participant User
