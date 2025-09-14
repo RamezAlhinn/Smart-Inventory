@@ -39,3 +39,23 @@ flowchart TD
     C --> D[Inventory Engine]
     D --> E[Streamlit Dashboard]
     E --> F[Purchase Order CSV Export]
+
+---
+
+## 📐 Sequence Diagram  
+
+```mermaid
+sequenceDiagram
+    participant User as User (Manager)
+    participant UI as Streamlit Dashboard
+    participant Engine as Inventory Engine
+    participant Forecast as Forecasting Model
+    participant Output as Purchase Order CSV
+
+    User->>UI: Upload sales.csv, stock.csv, products.csv
+    UI->>Forecast: Send sales data for demand forecasting
+    Forecast-->>UI: Return demand forecast (7–30 days)
+    UI->>Engine: Pass forecast + stock levels
+    Engine-->>UI: Calculate reorder point, safety stock, suggested order qty
+    UI->>Output: Generate downloadable PO CSV
+    Output-->>User: Purchase order ready for export
