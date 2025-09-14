@@ -32,17 +32,6 @@ The architecture is **modular** and can be extended to other verticals (e.g., ph
 
 ## 🏗 Architecture  
 
-```mermaid
-flowchart TD
-    A[Sales & Stock Data] --> B[Data Processing Layer]
-    B --> C[Forecasting Models]
-    C --> D[Inventory Engine]
-    D --> E[Streamlit Dashboard]
-    E --> F[Purchase Order CSV Export]
-
-
---- 
-
 ```markdown
 
 ```mermaid
