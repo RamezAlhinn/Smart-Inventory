@@ -47,3 +47,58 @@ sequenceDiagram
     Engine-->>UI: Calculate reorder point, safety stock, suggested order qty
     UI->>Output: Generate downloadable PO CSV
     Output-->>User: Purchase order ready for export
+
+
+## 🚀 Deployment with Docker & GitHub Actions
+
+Our app is fully containerized and auto-updates when code is pushed to **GitHub → Docker Hub → Server**.
+
+### 1. Build & Push (GitHub Actions)  
+Every push to `main` triggers a GitHub Action that:  
+- Builds the Docker image  
+- Tags it as `latest`  
+- Pushes it to Docker Hub (`ramezalhinn000/smart-inventory:latest`)  
+
+### 2. Run the App Locally / Server  
+Start the container:  
+```bash
+docker run -d \
+  --name smart-inventory \
+  -p 8501:8501 \
+  -v "$PWD/data:/app/data" \
+  ramezalhinn000/smart-inventory:latest
+```
+
+- `-p 8501:8501` → exposes the Streamlit dashboard  
+- `-v "$PWD/data:/app/data"` → mounts local data folder into the container  
+
+### 3. Auto-Updates with Watchtower  
+Install **Watchtower** to auto-pull new images and restart the app:  
+```bash
+docker run -d \
+  --name watchtower \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  containrrr/watchtower \
+  --interval 60 \
+  smart-inventory
+```
+
+- `--interval 60` → checks every 60 seconds for new images  
+- If a new image is found, Watchtower pulls it, stops the old container, and restarts it with the updated image.  
+
+### 4. Logs & Monitoring  
+Check logs for Watchtower:  
+```bash
+docker logs watchtower
+```
+
+### 5. (Optional) Restart Policy  
+To ensure containers always restart after reboot:  
+```bash
+docker update --restart unless-stopped smart-inventory
+docker update --restart unless-stopped watchtower
+```
+
+---
+
+⚡ Now your app is **self-updating**: push code → GitHub → Docker Hub → Server updates automatically.
