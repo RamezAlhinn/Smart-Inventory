@@ -7,7 +7,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ make \
-    libatlas-base-dev gfortran \
+    libopenblas-dev liblapack-dev gfortran \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
