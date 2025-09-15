@@ -7,25 +7,15 @@ def forecast_prophet(df, horizon=14):
     df: must have columns ["ds", "y"]
     horizon: number of future days to forecast
     """
-    # Ensure df is valid
-    df = df.dropna().copy()
-    if df["y"].nunique() <= 1:
-        raise ValueError("Not enough variation in data for forecasting")
+    model = Prophet(yearly_seasonality=False, weekly_seasonality=True, daily_seasonality=False)
+    model.add_seasonality(name="monthly", period=30.5, fourier_order=5)
 
-    model = Prophet(
-        daily_seasonality=True,
-        yearly_seasonality=False,
-        weekly_seasonality=True,
-    )
-
-    # More stable optimization
-    try:
-        model.fit(df)
-    except RuntimeError:
-        # Retry with smaller iterations
-        model = Prophet(daily_seasonality=True, weekly_seasonality=True)
-        model.fit(df, iter=2000)
+    model.fit(df)
 
     future = model.make_future_dataframe(periods=horizon)
     forecast = model.predict(future)
+
+    # Clip negative predictions to 0
+    forecast["yhat"] = forecast["yhat"].clip(lower=0)
+
     return forecast
