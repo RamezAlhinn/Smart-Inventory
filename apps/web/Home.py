@@ -34,11 +34,11 @@ if sales_file and stock_file:
     # Forecast model choice
     model_choice = st.selectbox(
         "Forecast Model",
-        ["Moving Average (fast)", "Prophet (slower)"]
+        ["Moving Average (fast)", "AI Powered"]
     )
 
     # Horizon slider (shorter for Prophet)
-    if model_choice == "Prophet (slower)":
+    if model_choice == "AI Powered":
         horizon = st.slider("Forecast Horizon (days)", 7, 14, 7)
     else:
         horizon = st.slider("Forecast Horizon (days)", 7, 30, 14)
