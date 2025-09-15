@@ -27,28 +27,7 @@ The architecture is **modular** and can be extended to other verticals (e.g., ph
 - **Core Libraries:** Pandas, NumPy, Streamlit, Prophet  
 - **Architecture:** Modular packages (forecasting, inventory, utils)  
 - **Visualization:** Streamlit Charts  
-
 ---
-
-## 🏗 Architecture  
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant UI as Dashboard
-    participant Engine as InventoryEngine
-    participant Forecast as ForecastModel
-    participant Output as PurchaseOrderCSV
-
-    User->>UI: Upload sales.csv, stock.csv, products.csv
-    UI->>Forecast: Send sales data for demand forecasting
-    Forecast-->>UI: Return demand forecast (7–30 days)
-    UI->>Engine: Pass forecast + stock levels
-    Engine-->>UI: Calculate reorder point, safety stock, suggested order qty
-    UI->>Output: Generate downloadable PO CSV
-    Output-->>User: Purchase order ready for export
-
-
 ## 🚀 Deployment with Docker & GitHub Actions
 
 Our app is fully containerized and auto-updates when code is pushed to **GitHub → Docker Hub → Server**.
@@ -102,3 +81,24 @@ docker update --restart unless-stopped watchtower
 ---
 
 ⚡ Now your app is **self-updating**: push code → GitHub → Docker Hub → Server updates automatically.
+---
+
+## 🏗 Architecture  
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Dashboard
+    participant Engine as InventoryEngine
+    participant Forecast as ForecastModel
+    participant Output as PurchaseOrderCSV
+
+    User->>UI: Upload sales.csv, stock.csv, products.csv
+    UI->>Forecast: Send sales data for demand forecasting
+    Forecast-->>UI: Return demand forecast (7–30 days)
+    UI->>Engine: Pass forecast + stock levels
+    Engine-->>UI: Calculate reorder point, safety stock, suggested order qty
+    UI->>Output: Generate downloadable PO CSV
+    Output-->>User: Purchase order ready for export
+
+
