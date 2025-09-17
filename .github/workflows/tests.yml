@@ -23,5 +23,9 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Run tests
-        run: PYTHONPATH=. pytest -v
+      - name: Run unit + integration tests
+        run: PYTHONPATH=. pytest -v --maxfail=1 --disable-warnings
+
+      # Optional: separate step for Streamlit smoke test
+      - name: Run Streamlit UI smoke test
+        run: PYTHONPATH=. pytest tests/integration/test_ui.py -v --maxfail=1 --disable-warnings
