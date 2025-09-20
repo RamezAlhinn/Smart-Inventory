@@ -1,6 +1,6 @@
 import pandas as pd
 from packages.core.forecasting.baseline import to_daily, moving_avg_forecast
-from packages.core.inventory.reorder import suggest_order
+from src.core.reorder.reorder import suggest_order
 
 def test_end_to_end_pipeline():
     # 1. Fake sales data

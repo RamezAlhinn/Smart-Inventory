@@ -1,6 +1,6 @@
 from packages.core.forecasting.baseline import to_daily, moving_avg_forecast
-from packages.core.forecasting.prophet_model import forecast_prophet
-from packages.core.inventory.reorder import suggest_order
+from src.core.forecasting.prophet_model import forecast_prophet
+from src.core.reorder.reorder import suggest_order
 
 # Load sales + stock data
 sales = pd.read_csv("data/sales.csv")

@@ -1,5 +1,5 @@
 import pytest
-from packages.core.inventory.reorder import suggest_order
+from src.core.reorder.reorder import suggest_order
 
 def test_suggest_order_no_need():
     qty, rop, sigma = suggest_order(daily_demand=5, sigma=1, lead=2, on_hand=20, moq=1)
