@@ -1,0 +1,1 @@
+# Streamlit config for supermarket
