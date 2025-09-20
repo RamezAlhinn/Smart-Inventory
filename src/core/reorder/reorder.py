@@ -1,10 +1,19 @@
 import math
 
-def suggest_order(daily_demand: float, sigma: float, lead: int, on_hand: float, moq: int, z: float = 1.65):
+def suggest_order(
+    daily_demand: float,
+    sigma: float,
+    lead: int,
+    on_hand: float,
+    moq: int,
+    z: float = 1.65
+) -> dict:
     """
-    Stable reorder rule:
-    - If demand <= 0 → no demand, no safety stock.
-    - Otherwise, use standard ROP = demand during lead + safety stock.
+    Core reorder calculation (domain-agnostic).
+    Standard (s, Q) rule:
+    - ROP = demand during lead + safety stock.
+    - Safety stock = z * sigma * sqrt(lead).
+    Returns structured result for easier downstream policy adjustments.
     """
     lead = max(int(lead), 1)
     moq = max(int(moq), 1)
@@ -23,4 +32,15 @@ def suggest_order(daily_demand: float, sigma: float, lead: int, on_hand: float, 
     if qty > 0:
         qty = ((qty + moq - 1) // moq) * moq  # round up to MOQ
 
-    return int(qty), float(rop), float(safety_stock)
+    return {
+        "qty": int(qty),
+        "rop": float(rop),
+        "safety_stock": float(safety_stock),
+        "on_hand": float(on_hand),
+        "demand_lead": float(demand_lead),
+        "daily_demand": float(daily_demand),
+        "sigma": float(sigma),
+        "lead": lead,
+        "moq": moq,
+        "z": z,
+    }
