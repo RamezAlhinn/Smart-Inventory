@@ -1,14 +1,20 @@
 import sys, os
-# Fix path so Streamlit Cloud can find packages/
+import streamlit as st
+import pandas as pd
+
+# --- Path setup (ensure src/ is visible) ---
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-import streamlit as st
-import pandas as pd
-from packages.core.forecasting.baseline import to_daily, moving_avg_forecast
-from packages.core.forecasting.prophet_model import forecast_prophet
-from packages.core.inventory.reorder import suggest_order
+from src.core.forecasting.baseline import to_daily, moving_avg_forecast
+from src.core.forecasting.prophet_model import forecast_prophet
+from src.core.reorder import suggest_order
+from src.domains import get_domain_module
+
+# --- Load domain-specific plugin ---
+uiconfig = get_domain_module("uiconfig")
+policies = get_domain_module("policies")
 
 # --- Page setup ---
 st.set_page_config(page_title="Smart Inventory Dashboard", layout="wide")
@@ -24,12 +30,8 @@ if sales_file and stock_file:
     stock = pd.read_csv(stock_file, parse_dates=["date"])
     products = pd.read_csv(products_file) if products_file else None
 
-    # --- Filters ---
-    available_stores = sales["store_id"].unique().tolist()
-    available_categories = sales["category"].unique().tolist() if "category" in sales.columns else []
-
-    store = st.selectbox("Select Store", ["All"] + available_stores)
-    categories = st.multiselect("Select Categories", available_categories, default=available_categories)
+    # --- Filters (delegated to domain UI if needed) ---
+    store, categories = uiconfig.render_filters(sales)
 
     # Forecast model choice
     model_choice = st.selectbox(
@@ -37,11 +39,13 @@ if sales_file and stock_file:
         ["Moving Average (fast)", "AI Powered"]
     )
 
-    # Horizon slider (shorter for Prophet)
-    if model_choice == "AI Powered":
-        horizon = st.slider("Forecast Horizon (days)", 7, 14, 7)
-    else:
-        horizon = st.slider("Forecast Horizon (days)", 7, 30, 14)
+    # Horizon slider
+    horizon = st.slider(
+        "Forecast Horizon (days)",
+        7,
+        30,
+        7 if model_choice == "AI Powered" else 14
+    )
 
     lead = st.number_input("Lead Time (days)", 1, 30, 5)
     moq = st.number_input("Minimum Order Quantity", 1, 1000, 1)
@@ -53,7 +57,7 @@ if sales_file and stock_file:
     if categories:
         sales_filtered = sales_filtered[sales_filtered["category"].isin(categories)]
 
-    # --- Process each SKU --
+    # --- Process each SKU ---
     results = []
     for sku in sales_filtered["sku"].unique():
         s_df = sales_filtered[sales_filtered["sku"] == sku][["date", "qty_sold"]]
@@ -81,45 +85,27 @@ if sales_file and stock_file:
         ]
         on_hand = int(on_hand_row["on_hand"].iloc[0]) if not on_hand_row.empty else 0
 
-        # Reorder
-        qty, rop, ss = suggest_order(d_daily, sigma, lead, on_hand, moq)
+        # Reorder (domain policy may override core suggest_order)
+        qty, rop, ss = policies.get_reorder_qty(
+            sku=sku,
+            d_daily=d_daily,
+            sigma=sigma,
+            lead=lead,
+            on_hand=on_hand,
+            moq=moq,
+        )
 
         # Product info (if provided)
-        prod_name = (
-            products.loc[products["sku"] == sku, "name"].values[0]
-            if products is not None and sku in products["sku"].values
-            else sku
-        )
-        prod_cat = (
-            products.loc[products["sku"] == sku, "category"].values[0]
-            if products is not None and sku in products["sku"].values
-            else (sales_filtered[sales_filtered["sku"] == sku]["category"].iloc[0]
-                  if "category" in sales_filtered.columns else "")
-        )
-        supplier = (
-            products.loc[products["sku"] == sku, "supplier"].values[0]
-            if products is not None and sku in products["sku"].values
-            else "Unknown"
-        )
-        unit_cost = (
-            float(products.loc[products["sku"] == sku, "unit_cost"].values[0])
-            if products is not None and sku in products["sku"].values
-            else 1.0
-        )
+        prod_name, prod_cat, supplier, unit_cost = uiconfig.resolve_product_info(sku, products, sales_filtered)
 
-        # Expiry risk
-        expiry_flag = "⚠️ Expiry Risk" if prod_cat in ["Dairy", "Bakery", "Produce"] else "OK"
+        # Expiry risk check (delegated to plugin)
+        expiry_flag = uiconfig.check_expiry_risk(prod_cat, sku, products)
 
         # Cost estimation
         order_cost = qty * unit_cost
 
-        # Status
-        if on_hand < d_daily:
-            status = "🟥 Critical"
-        elif on_hand < rop:
-            status = "🟨 Warning"
-        else:
-            status = "🟩 Safe"
+        # Status (critical, warning, safe)
+        status = uiconfig.evaluate_status(on_hand, d_daily, rop)
 
         results.append({
             "Product": prod_name,
@@ -137,48 +123,8 @@ if sales_file and stock_file:
             "supplier": supplier
         })
 
-    # --- Results table ---
+    # --- Results ---
     if results:
-        df_results = pd.DataFrame(results)
-
-        # KPIs
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("🛒 Total Products", len(df_results))
-        col2.metric("🚨 Critical", (df_results["Status"] == "🟥 Critical").sum())
-        col3.metric("⚠️ Warnings", (df_results["Status"] == "🟨 Warning").sum())
-        col4.metric("💰 Total Order Cost", f"{df_results['Order Cost (JOD)'].sum()} JOD")
-
-        # Sort table: Critical > Warning > Safe
-        status_order = {"🟥 Critical": 0, "🟨 Warning": 1, "🟩 Safe": 2}
-        df_results["status_sort"] = df_results["Status"].map(status_order)
-        df_results = df_results.sort_values(by="status_sort").drop(columns=["status_sort"])
-
-        # Show results
-        st.subheader("📦 Suggested Orders for All Products")
-        st.dataframe(df_results)
-
-        # Download all products
-        st.download_button("⬇️ Download Full Purchase Order CSV",
-                           df_results.to_csv(index=False),
-                           "purchase_order.csv")
-
-        # Group by Supplier (with expanders)
-        if "supplier" in df_results.columns:
-            st.subheader("📑 Purchase Orders by Supplier")
-            grouped = df_results.groupby("supplier")
-            for supplier, df_group in grouped:
-                with st.expander(f"🏢 {supplier} — {len(df_group)} products", expanded=False):
-                    st.dataframe(df_group[[
-                        "Product", "SKU", "Category", "Store",
-                        "On Hand", "Avg Daily Demand", "Reorder Point",
-                        "Suggested Order Qty", "Unit Cost (JOD)", "Order Cost (JOD)",
-                        "Expiry Risk", "Status"
-                    ]])
-                    st.download_button(
-                        f"⬇️ Download PO for {supplier}",
-                        df_group.to_csv(index=False),
-                        f"PO_{supplier.replace(' ', '_')}.csv"
-                    )
-
+        uiconfig.render_results(results)
     else:
         st.info("No products found with current filters.")
