@@ -85,15 +85,25 @@ if sales_file and stock_file:
         ]
         on_hand = int(on_hand_row["on_hand"].iloc[0]) if not on_hand_row.empty else 0
 
+        # 1. Resolve product info first
+        prod_name, prod_cat, supplier, unit_cost = uiconfig.resolve_product_info(
+            sku, products, sales_filtered
+        )
+
         # Reorder (domain policy may override core suggest_order)
-        qty, rop, ss = policies.get_reorder_qty(
+        result = policies.get_reorder_qty(
             sku=sku,
             d_daily=d_daily,
             sigma=sigma,
             lead=lead,
             on_hand=on_hand,
             moq=moq,
+            category=prod_cat
         )
+
+        qty = result["qty"]
+        rop = result["rop"]
+        ss = result["safety_stock"]
 
         # Product info (if provided)
         prod_name, prod_cat, supplier, unit_cost = uiconfig.resolve_product_info(sku, products, sales_filtered)
