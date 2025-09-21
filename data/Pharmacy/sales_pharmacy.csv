@@ -1,0 +1,7 @@
+date,store_id,sku,qty_sold,category
+2025-09-01,P1,AMOX500,5,Antibiotics
+2025-09-01,P1,INSULIN1,2,Insulin
+2025-09-02,P1,AMOX500,6,Antibiotics
+2025-09-02,P1,INSULIN1,1,Insulin
+2025-09-03,P1,AMOX500,4,Antibiotics
+2025-09-03,P1,INSULIN1,3,Insulin
